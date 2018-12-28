@@ -2,13 +2,22 @@
 import 'test-utils/dev-mode'
 import * as React from 'react'
 import { render, unmountComponentAtNode } from 'react-dom'
-import { Global, keyframes, css } from '@emotion/core'
+import { Global, keyframes, css, withEmotionCache } from '@emotion/core'
 
-beforeEach(() => {
-  // $FlowFixMe
-  document.head.innerHTML = ''
+const ClearCache = withEmotionCache((props, cache) => {
+  cache.sheet.flush()
+  return null
+})
+
+beforeAll(() => {
   // $FlowFixMe
   document.body.innerHTML = `<div id="root"></div>`
+})
+
+afterEach(() => {
+  const root = ((document.getElementById('root'): any): Element)
+  render(<ClearCache />, root)
+  unmountComponentAtNode(root)
 })
 
 test('basic', () => {
@@ -46,4 +55,18 @@ test('basic', () => {
   unmountComponentAtNode(document.getElementById('root'))
   expect(document.head).toMatchSnapshot()
   expect(document.body).toMatchSnapshot()
+})
+
+test('updating more than 1 global rule', () => {
+  const renderComponent = ({ background, color }) =>
+    render(
+      <Global styles={{ body: { background }, div: { color } }} />,
+      // $FlowFixMe
+      document.getElementById('root')
+    )
+
+  renderComponent({ background: 'white', color: 'black' })
+  expect(document.head).toMatchSnapshot()
+  renderComponent({ background: 'gray', color: 'white' })
+  expect(document.head).toMatchSnapshot()
 })
